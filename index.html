@@ -568,21 +568,9 @@
           <div>
             <p class="label home-info-label">Contact</p>
             <!-- EDIT: Your email -->
-            <p class="home-info-value"><a href="mailto:bryan.dimaio@gmail.com">bryan.dimaio@gmail.com</a></p>
+            <p class="home-info-value"><a href="mailto:bryan.dimaio@gmail.com">bryandimaio@gmail.com</a></p>
           </div>
-          <div>
-            <div class="home-stat-row">
-              <!-- EDIT: Your numbers -->
-              <div>
-                <div class="home-stat-num">200+</div>
-                <div class="home-stat-label">Projects</div>
-              </div>
-              <div>
-                <div class="home-stat-num">10+</div>
-                <div class="home-stat-label">Years</div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>
@@ -616,13 +604,8 @@
           <p class="about-sidebar-val">Mixing<br>Mastering</p>
         </div>
         <div class="about-sidebar-item">
-          <p class="label">Tools</p>
-          <!-- EDIT: Your DAW / gear -->
-          <p class="about-sidebar-val">Pro Tools<br>Logic Pro<br>iZotope RX</p>
-        </div>
-        <div class="about-sidebar-item">
           <p class="label">Education</p>
-          <p class="about-sidebar-val">Berklee College of Muaic<br>Bachelor of Music</p>
+          <p class="about-sidebar-val">Berklee College of Music<br>Bachelor of Music</p>
         </div>
       </div>
     </div>
@@ -820,10 +803,11 @@
     /* Fetch high-res artwork from iTunes lookup API (free, no auth, CORS-OK) */
     async function fetchArtwork(itunesId) {
       try {
-        const res = await fetch(`https://itunes.apple.com/lookup?id=${itunesId}&entity=album`);
+        const res  = await fetch(`https://itunes.apple.com/lookup?id=${itunesId}`);
         const data = await res.json();
-        const art = data.results?.[0]?.artworkUrl100;
-        // Bump from 100x100 to 600x600
+        // Scan all results for an artworkUrl — album IDs sometimes return
+        // the artist as results[0], so don't assume first result is correct
+        const art  = data.results?.find(r => r.artworkUrl100)?.artworkUrl100;
         return art ? art.replace('100x100bb', '600x600bb') : null;
       } catch { return null; }
     }
