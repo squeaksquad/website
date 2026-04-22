@@ -800,13 +800,13 @@
       return null;
     }
 
-    /* Fetch high-res artwork from iTunes lookup API (free, no auth, CORS-OK) */
+    /* Fetch high-res artwork via a Cloudflare Worker proxy (avoids CORS block from Apple). */
+    const ITUNES_PROXY = 'https://itunes-proxy.bryan-dimaio.workers.dev'; // ← swap YOURNAME
+
     async function fetchArtwork(itunesId) {
       try {
-        const res  = await fetch(`https://itunes.apple.com/lookup?id=${itunesId}`);
+        const res  = await fetch(`${ITUNES_PROXY}?id=${itunesId}`);
         const data = await res.json();
-        // Scan all results for an artworkUrl — album IDs sometimes return
-        // the artist as results[0], so don't assume first result is correct
         const art  = data.results?.find(r => r.artworkUrl100)?.artworkUrl100;
         return art ? art.replace('100x100bb', '600x600bb') : null;
       } catch { return null; }
