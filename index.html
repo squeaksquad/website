@@ -8,7 +8,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;1,300;1,400&family=Figtree:wght@300;400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;1,300;1,400&family=Figtree:wght@300;400&display=swap" rel="stylesheet">
 
   <style>
     /* ================================================
@@ -26,7 +26,7 @@
       --max-w:       1100px;
       --font-d:      'Cormorant', Georgia, serif;
       --font-b:      'Figtree', system-ui, sans-serif;
-      --font-m:      'DM Mono', monospace;
+      --font-m:      'Figtree', sans-serif;
     }
 
     /* ================================================
@@ -38,6 +38,7 @@
       background: var(--bg);
       color: var(--text);
       font-family: var(--font-b);
+      font-variant-numeric: tabular-nums;
       font-weight: 300;
       line-height: 1.6;
       overflow: hidden;
@@ -185,7 +186,7 @@
     #page-home .page-inner {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      min-height: calc(100dvh - var(--nav-h));
+      min-height: min(calc(100dvh - var(--nav-h)), 680px);
       align-items: center;
       padding-top: 0;
       padding-bottom: 0;
@@ -202,7 +203,7 @@
 
     .home-name {
       font-family: var(--font-d);
-      font-size: clamp(4rem, 8vw, 7.5rem);
+      font-size: clamp(2.6rem, 11vw, 7.5rem);
       font-weight: 300;
       line-height: 0.92;
       letter-spacing: -0.02em;
@@ -475,7 +476,7 @@
     ================================================ */
     @media (max-width: 768px) {
       body { overflow: auto; height: auto; }
-      .page { position: static; overflow: visible; opacity: 1; transform: none; pointer-events: auto; display: none; }
+      .page { position: static; overflow: visible; opacity: 1; transform: none; pointer-events: auto; display: none; padding-top: var(--nav-h); }
       .page.active { display: block; }
 
       .nav-inner { padding: 0 24px; }
@@ -540,8 +541,6 @@
   <div class="page active" id="page-home">
     <div class="page-inner">
       <div class="home-left">
-        <!-- EDIT: Your disciplines -->
-        <p class="label home-eyebrow">Mixing · Mastering</p>
         <!-- EDIT: Your name. <em> = italic gold -->
         <h1 class="home-name">Bryan<br><em>DiMaio</em></h1>
         <div class="home-rule"></div>
@@ -559,11 +558,6 @@
           <div>
             <p class="label home-info-label">Based in</p>
             <p class="home-info-value">Boston, MA</p>
-          </div>
-          <div>
-            <p class="label home-info-label">Available for</p>
-            <!-- EDIT: What you take on -->
-            <p class="home-info-value">Mixing and Mastering</p>
           </div>
           <div>
             <p class="label home-info-label">Contact</p>
