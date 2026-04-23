@@ -634,7 +634,7 @@
         </div>
         <div class="about-sidebar-item">
           <p class="label">Specialises in</p>
-          <p class="about-sidebar-val">Recording<br>Mixing<br>Mastering<br>Dolby Atmos</p>
+          <p class="about-sidebar-val">Recording<br>Mixing<br>Dolby Atmos<br>Mastering</p>
         </div>
         <div class="about-sidebar-item">
           <p class="label">Education</p>
@@ -889,6 +889,9 @@
       document.getElementById('cv-loading').style.display = 'none';
       document.getElementById('cv-table').style.display   = 'table';
 
+      // Equalize row heights to the tallest row (double-RAF lets layout settle first)
+      requestAnimationFrame(() => requestAnimationFrame(equalizeRowHeights));
+
       // Async artwork for thumbnails (same proxy as featured cards)
       rows.forEach(async (c, i) => {
         const id = itunesIdFromLink(c.link);
@@ -899,6 +902,15 @@
           placeholder.outerHTML = `<img class="cv-thumb" src="${esc(artUrl)}" alt="${esc(c.project)}" loading="lazy">`;
         }
       });
+    }
+
+    function equalizeRowHeights() {
+      const rows = document.querySelectorAll('#cv-tbody tr');
+      if (!rows.length) return;
+      rows.forEach(r => r.style.height = ''); // reset first so we measure natural heights
+      let max = 0;
+      rows.forEach(r => { max = Math.max(max, r.getBoundingClientRect().height); });
+      rows.forEach(r => r.style.height = Math.ceil(max) + 'px');
     }
 
     document.querySelectorAll('.credits-tab').forEach(btn => {
