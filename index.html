@@ -773,8 +773,8 @@
       }
       const featured = rows.filter(r => r.featured === true || String(r.featured).toUpperCase() === 'TRUE');
 
-      // One batched artwork lookup for every credit, then render against the result.
-      const artMap = await fetchArtworkMap(rows);
+      // Load the pre-built artwork map, then render against it.
+      const artMap = await fetchArtworkMap();
       renderFeatured(featured, artMap);
       renderFullCV(rows, artMap);
       document.getElementById('credits-count').textContent =
@@ -836,27 +836,20 @@
       return null;
     }
 
-    /* Fetch high-res artwork via a Cloudflare Worker proxy (avoids CORS block from Apple). */
-    const ITUNES_PROXY = 'https://itunes-proxy.bryan-dimaio.workers.dev'; // ← swap YOURNAME
-
-    /* Batch-fetch artwork for every credit in a single proxy call, returned as a
-       Map of itunesId → 600x600 artwork URL. iTunes returns results in arbitrary
-       order and silently drops IDs it can't find, so we key the Map by the id the
-       API echoes back (collectionId ?? trackId ?? artistId), never by request order. */
-    async function fetchArtworkMap(rows) {
-      const ids = [...new Set(rows.map(r => itunesIdFromLink(r.link)).filter(Boolean))];
-      const map = new Map();
-      if (!ids.length) return map;
+    /* Artwork is resolved ahead of time into a static artwork.json map of
+       { itunesId: "600x600 artwork URL" } and committed to the repo.
+       iTunes blocks Cloudflare Worker egress IPs (403), so we can't proxy
+       lookups at request time — see build-artwork.mjs, which regenerates this
+       file from the sheet. Images themselves load fine via <img src>. */
+    async function fetchArtworkMap() {
       try {
-        const res  = await fetch(`${ITUNES_PROXY}?id=${ids.join(',')}`);
-        const data = await res.json();
-        for (const r of data.results || []) {
-          const id  = r.collectionId ?? r.trackId ?? r.artistId;
-          const art = r.artworkUrl100;
-          if (id != null && art) map.set(String(id), art.replace('100x100bb', '600x600bb'));
-        }
-      } catch { /* degrade silently — rows keep their placeholders */ }
-      return map;
+        const res = await fetch('artwork.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return new Map(Object.entries(await res.json()));
+      } catch (err) {
+        console.warn('artwork.json fetch failed — rows keep their placeholders.', err);
+        return new Map();
+      }
     }
 
     function renderFeatured(credits, artMap) {
