@@ -1,0 +1,4 @@
+name = "itunes-proxy"
+main = "worker.js"
+compatibility_date = "2026-06-19"
+workers_dev = true

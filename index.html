@@ -772,8 +772,11 @@
         rows = CONFIG.SAMPLE_DATA;
       }
       const featured = rows.filter(r => r.featured === true || String(r.featured).toUpperCase() === 'TRUE');
-      renderFeatured(featured);
-      renderFullCV(rows);
+
+      // One batched artwork lookup for every credit, then render against the result.
+      const artMap = await fetchArtworkMap(rows);
+      renderFeatured(featured, artMap);
+      renderFullCV(rows, artMap);
       document.getElementById('credits-count').textContent =
         `${rows.length} credit${rows.length !== 1 ? 's' : ''}`;
     }
@@ -836,48 +839,60 @@
     /* Fetch high-res artwork via a Cloudflare Worker proxy (avoids CORS block from Apple). */
     const ITUNES_PROXY = 'https://itunes-proxy.bryan-dimaio.workers.dev'; // ← swap YOURNAME
 
-    async function fetchArtwork(itunesId) {
+    /* Batch-fetch artwork for every credit in a single proxy call, returned as a
+       Map of itunesId → 600x600 artwork URL. iTunes returns results in arbitrary
+       order and silently drops IDs it can't find, so we key the Map by the id the
+       API echoes back (collectionId ?? trackId ?? artistId), never by request order. */
+    async function fetchArtworkMap(rows) {
+      const ids = [...new Set(rows.map(r => itunesIdFromLink(r.link)).filter(Boolean))];
+      const map = new Map();
+      if (!ids.length) return map;
       try {
-        const res  = await fetch(`${ITUNES_PROXY}?id=${itunesId}`);
+        const res  = await fetch(`${ITUNES_PROXY}?id=${ids.join(',')}`);
         const data = await res.json();
-        const art  = data.results?.find(r => r.artworkUrl100)?.artworkUrl100;
-        return art ? art.replace('100x100bb', '600x600bb') : null;
-      } catch { return null; }
+        for (const r of data.results || []) {
+          const id  = r.collectionId ?? r.trackId ?? r.artistId;
+          const art = r.artworkUrl100;
+          if (id != null && art) map.set(String(id), art.replace('100x100bb', '600x600bb'));
+        }
+      } catch { /* degrade silently — rows keep their placeholders */ }
+      return map;
     }
 
-    async function renderFeatured(credits) {
+    function renderFeatured(credits, artMap) {
       const el = document.getElementById('featured-credits');
       if (!credits.length) {
         el.innerHTML = '<div class="cv-loading">No featured credits yet.</div>';
         return;
       }
 
-      // Render cards immediately with placeholders, then fill in artwork
-      el.innerHTML = credits.map((c, i) => `
+      el.innerHTML = credits.map((c, i) => {
+        const id  = itunesIdFromLink(c.link);
+        const art = id ? artMap.get(id) : null;
+        const artHtml = art
+          ? `<img class="credit-card-art" src="${esc(art)}" alt="${esc(c.project)} artwork" loading="lazy">`
+          : (id ? '<div class="credit-card-art-placeholder"></div>' : '');
+        return `
         <div class="credit-card" id="card-${i}">
-          ${itunesIdFromLink(c.link) ? `<div class="credit-card-art-placeholder" id="art-${i}"></div>` : ''}
+          ${artHtml}
           <div class="credit-card-year">${esc(c.year)}</div>
           <div class="credit-card-project">${esc(c.project)}</div>
           <div class="credit-card-artist">${esc(c.artist)}</div>
           <span class="credit-card-role">${esc(c.role)}</span>
-        </div>`).join('');
-
-      // Fetch artwork in parallel for cards that have an iTunes link
-      credits.forEach(async (c, i) => {
-        const id = itunesIdFromLink(c.link);
-        if (!id) return;
-        const artUrl = await fetchArtwork(id);
-        const placeholder = document.getElementById(`art-${i}`);
-        if (artUrl && placeholder) {
-          placeholder.outerHTML = `<img class="credit-card-art" src="${esc(artUrl)}" alt="${esc(c.project)} artwork" loading="lazy">`;
-        }
-      });
+        </div>`;
+      }).join('');
     }
 
-    function renderFullCV(rows) {
-      document.getElementById('cv-tbody').innerHTML = rows.map((c, i) => `
+    function renderFullCV(rows, artMap) {
+      document.getElementById('cv-tbody').innerHTML = rows.map((c, i) => {
+        const id  = itunesIdFromLink(c.link);
+        const art = id ? artMap.get(id) : null;
+        const thumbHtml = art
+          ? `<img class="cv-thumb" src="${esc(art)}" alt="${esc(c.project)}" loading="lazy">`
+          : '<div class="cv-thumb-placeholder"></div>';
+        return `
         <tr>
-          <td class="td-thumb"><div class="cv-thumb-placeholder" id="cv-thumb-${i}"></div></td>
+          <td class="td-thumb">${thumbHtml}</td>
           <td class="td-year">${esc(c.year)}</td>
           <td class="td-project">
             <div class="td-year-inline">${esc(c.year)}</div>
@@ -885,23 +900,13 @@
           </td>
           <td>${esc(c.artist)}</td>
           <td>${esc(c.role)}</td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
       document.getElementById('cv-loading').style.display = 'none';
       document.getElementById('cv-table').style.display   = 'table';
 
       // Equalize row heights to the tallest row (double-RAF lets layout settle first)
       requestAnimationFrame(() => requestAnimationFrame(equalizeRowHeights));
-
-      // Async artwork for thumbnails (same proxy as featured cards)
-      rows.forEach(async (c, i) => {
-        const id = itunesIdFromLink(c.link);
-        if (!id) return;
-        const artUrl = await fetchArtwork(id);
-        const placeholder = document.getElementById(`cv-thumb-${i}`);
-        if (artUrl && placeholder) {
-          placeholder.outerHTML = `<img class="cv-thumb" src="${esc(artUrl)}" alt="${esc(c.project)}" loading="lazy">`;
-        }
-      });
     }
 
     function equalizeRowHeights() {
